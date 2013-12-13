@@ -49,6 +49,7 @@ extern void mdss_mdp_cmds_send(unsigned int on);
 
 static struct mdss_dsi_phy_ctrl phy_params;
 static struct mdss_panel_common_pdata *local_pdata;
+static struct work_struct send_cmds_work;
 struct mdss_panel_data *cmds_panel_data;
 
 void mdss_dsi_panel_pwm_cfg(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -1359,6 +1360,8 @@ static int __devinit mdss_dsi_panel_probe(struct platform_device *pdev)
 	rc = dsi_panel_device_register(pdev, &vendor_pdata);
 	if (rc)
 		return rc;
+
+	INIT_WORK(&send_cmds_work, send_local_on_cmds);
 
 	local_pdata = &vendor_pdata;
 	if (!local_pdata)
