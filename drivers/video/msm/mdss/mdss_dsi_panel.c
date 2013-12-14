@@ -25,18 +25,9 @@
 #include <linux/debugfs.h>
 #include <linux/ctype.h>
 #endif
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-#include <linux/input/prevent_sleep.h>
-#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
-#include <linux/input/sweep2wake.h>
-#endif
-#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
-#include <linux/input/doubletap2wake.h>
-#endif
-#endif
-#ifdef CONFIG_PWRKEY_SUSPEND
-#include <linux/qpnp/power-on.h>
-#endif
+
+#include <asm/system_info.h>
+
 #include "mdss_dsi.h"
 
 #ifdef CONFIG_POWERSUSPEND
@@ -44,6 +35,7 @@
 #endif
 
 #define DT_CMD_HDR 6
+#define GAMMA_COMPAT 11
 
 static bool mdss_panel_flip_ud = false;
 static int mdss_panel_id = PANEL_QCOM;
@@ -1145,6 +1137,11 @@ static int read_local_on_cmds(char *buf, size_t cmd)
 	int i, len = 0;
 	int dlen;
 
+	if (system_rev != GAMMA_COMPAT) {
+		pr_err("Incompatible hardware revision: %d\n", system_rev);
+		return -EINVAL;
+	}
+
 	dlen = local_pdata->on_cmds.cmds[cmd].dchdr.dlen - 1;
 	if (!dlen)
 		return -ENOMEM;
@@ -1173,6 +1170,11 @@ static int write_local_on_cmds(struct device *dev, const char *buf,
 
 	if (cnt) {
 		cnt = 0;
+		return -EINVAL;
+	}
+
+	if (system_rev != GAMMA_COMPAT) {
+		pr_err("Incompatible hardware revision: %d\n", system_rev);
 		return -EINVAL;
 	}
 
@@ -1215,7 +1217,40 @@ static int write_local_on_cmds(struct device *dev, const char *buf,
 		cnt = strlen(tmp);
 	}
 
+	pr_info("%s\n", __func__);
+
 	return rc;
+}
+
+static void send_local_on_cmds(struct work_struct *work)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl = NULL;
+
+	if (cmds_panel_data == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return;
+	}
+
+	ctrl = container_of(cmds_panel_data, struct mdss_dsi_ctrl_pdata,
+			    panel_data);
+
+	/* Prevent flicker during continous splash */
+	if (cmds_panel_data->panel_info.cont_splash_enabled)
+		return;
+
+	mdss_mdp_cmds_send(1);
+	gpio_set_value((ctrl->rst_gpio), 0);
+	udelay(200);
+	gpio_set_value((ctrl->rst_gpio), 1);
+	msleep(20);
+
+	if (ctrl->ctrl_state & CTRL_STATE_PANEL_INIT)
+		ctrl->ctrl_state &= ~CTRL_STATE_PANEL_INIT;
+
+	if (local_pdata->on_cmds.cmd_cnt)
+		mdss_dsi_panel_cmds_send(ctrl, &local_pdata->on_cmds);
+
+	pr_info("%s\n", __func__);
 }
 
 /************************** sysfs interface ************************/
@@ -1224,22 +1259,14 @@ static ssize_t write_kgamma_send(struct device *dev,
 				 struct device_attribute *attr,
 				 const char *buf, size_t count)
 {
-	int rc;
-	struct mdss_dsi_ctrl_pdata *ctrl = NULL;
-
-	if (cmds_panel_data == NULL) {
-		pr_err("%s: Invalid input data\n", __func__);
-		return -EINVAL;
+	if (!cmds_panel_data->panel_info.panel_power_on) {
+		pr_err("%s: Panel off, failed to send commands\n", __func__);
+		return -EPERM;
 	}
 
-	ctrl = container_of(cmds_panel_data, struct mdss_dsi_ctrl_pdata,
-			    panel_data);
+	schedule_work(&send_cmds_work);
 
-	if (local_pdata->on_cmds.cmd_cnt)
-		mdss_dsi_panel_cmds_send(ctrl, &local_pdata->on_cmds);
-
-	pr_info("%s\n", __func__);
-	return rc;
+	return count;
 }
 
 static DEVICE_ATTR(kgamma_send, 0644, NULL, write_kgamma_send);
