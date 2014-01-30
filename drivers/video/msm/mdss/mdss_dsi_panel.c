@@ -29,6 +29,7 @@
 #include <asm/system_info.h>
 
 #include "mdss_dsi.h"
+#include "mdss_mdp.h"
 
 #ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
@@ -1252,6 +1253,7 @@ static void send_local_on_cmds(struct work_struct *work)
 
 	if (local_pdata->on_cmds.cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, &local_pdata->on_cmds);
+	mdss_mdp_cmds_send(0);
 
 	pr_info("%s\n", __func__);
 }
