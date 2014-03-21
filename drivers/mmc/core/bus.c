@@ -429,6 +429,8 @@ int mmc_add_card(struct mmc_card *card)
 		card->idle_timeout = RUNTIME_SUSPEND_DELAY_MS;
 	}
 
+	device_enable_async_suspend(&card->dev);
+
 	mmc_card_set_present(card);
 
 	return 0;
