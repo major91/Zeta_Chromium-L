@@ -337,12 +337,12 @@ static int bq24192_set_input_i_limit(struct bq24192_chip *chip, int ma)
 		pr_err("can't find %d in icl_ma_table. Use min.\n", ma);
 		i = 0;
 	}
-
+	
 	temp = icl_ma_table[i].value;
 
 	if (ma > chip->max_input_i_ma) {
 		chip->saved_input_i_ma = ma;
-		pr_info("reject %d mA due to therm mitigation\n", ma);
+		pr_debug("reject %d mA due to therm mitigation\n", ma);
 		return 0;
 	}
 
@@ -350,7 +350,7 @@ static int bq24192_set_input_i_limit(struct bq24192_chip *chip, int ma)
 		chip->saved_input_i_ma = ma;
 
 	chip->therm_mitigation = false;
-	pr_info("input current limit = %d setting 0x%02x\n", ma, temp);
+	pr_debug("input current limit = %d setting 0x%02x\n", ma, temp);
 	return bq24192_masked_write(chip->client, INPUT_SRC_CONT_REG,
 			INPUT_CURRENT_LIMIT_MASK, temp);
 }
