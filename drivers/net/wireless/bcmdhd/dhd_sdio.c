@@ -1498,7 +1498,11 @@ dhd_enable_oob_intr(struct dhd_bus *bus, bool enable)
 #endif 
 
 #ifdef DHDTCPACK_SUPPRESS
+#ifndef CONFIG_LTO
 extern bool dhd_use_tcpack_suppress;
+#else
+extern uint dhd_use_tcpack_suppress;
+#endif
 
 /* Please be sure this function is called under dhd_os_tcpacklock() */
 void dhd_onoff_tcpack_sup(void *pub, bool on)
