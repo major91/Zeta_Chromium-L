@@ -39,13 +39,13 @@ cd $KERNELDIR
 rm -rf $RAMFS_TMP/tmp/*
 
 cd $RAMFS_TMP
-find . | fakeroot cpio -H newc -o | gzip -9 > $RAMFS_TMP.cpio.gz
-ls -lh $RAMFS_TMP.cpio.gz
+find . | fakeroot cpio -H newc -o | lzop -9 > $RAMFS_TMP.cpio.lzo
+ls -lh $RAMFS_TMP.cpio.lzo
 cd $KERNELDIR
 
 echo "Making new boot image"
 gcc -w -s -pipe -O2 -Itools/libmincrypt -o tools/mkbootimg/mkbootimg tools/libmincrypt/*.c tools/mkbootimg/mkbootimg.c
-tools/mkbootimg/mkbootimg --kernel $KERNELDIR/arch/arm/boot/zImage-dtb --ramdisk $RAMFS_TMP.cpio.gz --cmdline 'console=ttyHSL0,115200,n8 androidboot.hardware=hammerhead user_debug=31 maxcpus=2 msm_watchdog_v2.enable=1' --base 0x00000000 --pagesize 2048 --kernel_offset 0x00008000 --ramdisk_offset 0x02900000 --tags_offset 0x02700000 --second_offset 0x00f00000 -o $KERNELDIR/boot.img
+tools/mkbootimg/mkbootimg --kernel $KERNELDIR/arch/arm/boot/zImage-dtb --ramdisk $RAMFS_TMP.cpio.lzo --cmdline 'console=ttyHSL0,115200,n8 androidboot.hardware=hammerhead user_debug=31 maxcpus=2 msm_watchdog_v2.enable=1' --base 0x00000000 --pagesize 2048 --kernel_offset 0x00008000 --ramdisk_offset 0x02900000 --tags_offset 0x02700000 --second_offset 0x00f00000 -o $KERNELDIR/boot.img
 if [ "${1}" = "CC=\$(CROSS_COMPILE)gcc" ] ; then
 	dd if=/dev/zero bs=$((23068672-$(stat -c %s boot.img))) count=1 >> boot.img
 fi
