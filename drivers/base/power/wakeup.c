@@ -127,8 +127,6 @@ EXPORT_SYMBOL_GPL(wakeup_source_destroy);
  */
 void wakeup_source_add(struct wakeup_source *ws)
 {
-	unsigned long flags;
-
 	if (WARN_ON(!ws))
 		return;
 
@@ -137,9 +135,9 @@ void wakeup_source_add(struct wakeup_source *ws)
 	ws->active = false;
 	ws->last_time = ktime_get();
 
-	spin_lock_irqsave(&events_lock, flags);
+	spin_lock_irq(&events_lock);
 	list_add_rcu(&ws->entry, &wakeup_sources);
-	spin_unlock_irqrestore(&events_lock, flags);
+	spin_unlock_irq(&events_lock);
 }
 EXPORT_SYMBOL_GPL(wakeup_source_add);
 
@@ -149,14 +147,12 @@ EXPORT_SYMBOL_GPL(wakeup_source_add);
  */
 void wakeup_source_remove(struct wakeup_source *ws)
 {
-	unsigned long flags;
-
 	if (WARN_ON(!ws))
 		return;
 
-	spin_lock_irqsave(&events_lock, flags);
+	spin_lock_irq(&events_lock);
 	list_del_rcu(&ws->entry);
-	spin_unlock_irqrestore(&events_lock, flags);
+	spin_unlock_irq(&events_lock);
 	synchronize_rcu();
 }
 EXPORT_SYMBOL_GPL(wakeup_source_remove);
