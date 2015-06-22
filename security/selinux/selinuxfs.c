@@ -31,6 +31,10 @@
 #include <linux/kobject.h>
 #include <linux/ctype.h>
 
+#ifdef CONFIG_SEC_DEBUG
+#include <linux/proc_avc.h>
+#endif
+
 /* selinuxfs pseudo filesystem for exporting the security policy API.
    Based on the proc code and the fs/nfsd/nfsctl.c code. */
 
@@ -136,9 +140,11 @@ static ssize_t sel_read_enforce(struct file *filp, char __user *buf,
 	return simple_read_from_buffer(buf, count, ppos, tmpbuf, length);
 }
 
+#define sel_write_enforce NULL
+
 static const struct file_operations sel_enforce_ops = {
 	.read		= sel_read_enforce,
-	.write		= NULL,
+	.write		= sel_write_enforce,
 	.llseek		= generic_file_llseek,
 };
 
@@ -1870,6 +1876,9 @@ static int __init init_sel_fs(void)
 {
 	int err;
 
+#ifdef CONFIG_ALWAYS_ENFORCE
+	selinux_enabled = 1;
+#endif
 	if (!selinux_enabled)
 		return 0;
 
