@@ -25,18 +25,29 @@
 #include <linux/debugfs.h>
 #include <linux/ctype.h>
 #endif
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+#include <linux/input/prevent_sleep.h>
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+#include <linux/input/sweep2wake.h>
+#endif
+#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
+#include <linux/input/doubletap2wake.h>
+#endif
+#endif
+#ifdef CONFIG_PWRKEY_SUSPEND
+#include <linux/qpnp/power-on.h>
+#endif
+#include "mdss_dsi.h"
 
 #include <asm/system_info.h>
 
-#include "mdss_dsi.h"
-#include "mdss_mdp.h"
-
-#ifdef CONFIG_POWERSUSPEND
-#include <linux/powersuspend.h>
-#endif
-
 #define DT_CMD_HDR 6
 #define GAMMA_COMPAT 11
+
+//Basic color preset
+int color_preset = 0;
+module_param(color_preset, int, 0755);
+
 
 static bool mdss_panel_flip_ud = false;
 static int mdss_panel_id = PANEL_QCOM;
@@ -332,6 +343,12 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	mipi  = &pdata->panel_info.mipi;
 
 	pr_debug("%s: ctrl=%p ndx=%d\n", __func__, ctrl, ctrl->ndx);
+
+//Basic color preset 
+	if (color_preset == 1)
+		local_pdata->on_cmds.cmds[1].payload[0] = 0x77;
+	else
+		local_pdata->on_cmds.cmds[1].payload[0] = 0xFF;
 
 	if (local_pdata->on_cmds.cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, &local_pdata->on_cmds);
